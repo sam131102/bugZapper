@@ -42,6 +42,7 @@ function main(){
     var colors = [];
     var usedColors = [];
     var startAngle = Math.random() * 360;
+    const bacteriaSpeed = 1;
 
     // Generate vertex positions in a circle
     for (var i = 0; i < numPoints; i++) {
@@ -52,23 +53,19 @@ function main(){
         colors.push(1.0, 1.0, 1.0, 1.0);
     }
      //Generate vertices for bacteria cricles
-     for (var j = 0; j < numBacteria; j++) {
-        var angle = ((startAngle + (360 / numBacteria) * j) % 360) * Math.PI / 180; 
-        var x = Math.cos(angle) * radius;
-        var y = Math.sin(angle) * radius;
-        vertices.push(x, y, 0.0);
+        for (var j = 0; j < numBacteria; j++) {
+            var angle = ((startAngle + (360 / numBacteria) * j) % 360) * Math.PI / 180; 
+            var x = Math.cos(angle) * radius;
+            var y = Math.sin(angle) * radius;
+            vertices.push(x, y, 0.0);
 
-        angle += bacteriaSpeed * Math.PI / 180;
-
-        setTimeout(drawBacteria, 10);
-
-        var color;
-        do {
-            color = [Math.random(), Math.random(), Math.random(), 1.0];
-        } while (isColorUsed(color));
-        usedColors.push(color);
-        colors.push(...color);
-    }
+            var color;
+            do {
+                color = [Math.random(), Math.random(), Math.random(), 1.0];
+            } while (isColorUsed(color));
+            usedColors.push(color);
+            colors.push(...color);
+        }
 
     var vertexColorBuffer = gl.createBuffer();
     if (!vertexColorBuffer) {
@@ -114,3 +111,4 @@ function main(){
         return true;
     }
 }
+main();
