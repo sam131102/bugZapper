@@ -40,6 +40,8 @@ function main(){
     var radius = 0.8;
     var numBacteria = Math.floor(Math.random() * 10)+1;
     var colors = [];
+    var usedColors = [];
+    var startAngle = Math.random() * 360;
 
     // Generate vertex positions in a circle
     for (var i = 0; i < numPoints; i++) {
@@ -50,12 +52,22 @@ function main(){
         colors.push(1.0, 1.0, 1.0, 1.0);
     }
      //Generate vertices for bacteria cricles
-    for (var j = 0; j < numBacteria; j++) {
-        var angle = (Math.PI * 2 * j) / numBacteria; 
+     for (var j = 0; j < numBacteria; j++) {
+        var angle = ((startAngle + (360 / numBacteria) * j) % 360) * Math.PI / 180; 
         var x = Math.cos(angle) * radius;
         var y = Math.sin(angle) * radius;
         vertices.push(x, y, 0.0);
-        colors.push(Math.random(), Math.random(), Math.random(), 1.0);
+
+        angle += bacteriaSpeed * Math.PI / 180;
+
+        setTimeout(drawBacteria, 10);
+
+        var color;
+        do {
+            color = [Math.random(), Math.random(), Math.random(), 1.0];
+        } while (isColorUsed(color));
+        usedColors.push(color);
+        colors.push(...color);
     }
 
     var vertexColorBuffer = gl.createBuffer();
@@ -83,4 +95,22 @@ function main(){
     // Draw
     gl.drawArrays(gl.TRIANGLE_FAN, 0, numPoints);
     gl.drawArrays(gl.POINTS, numPoints, numBacteria);
+
+    function isColorUsed(color) {
+        for (var i = 0; i < usedColors.length; i++) {
+            if (areColorsEqual(color, usedColors[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function areColorsEqual(color1, color2) {
+        for (var i = 0; i < color1.length; i++) {
+            if (color1[i] !== color2[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
