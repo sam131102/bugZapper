@@ -41,8 +41,13 @@ function main() {
     var numPoints = 360;
     var radius = 0.8;
     var numBacteria = Math.min(Math.floor(Math.random() * 10) + 1, 10); // Limit bacteria to 10
-    var initialRadius = 0.08; // Initial radius for bacteria
-    var growthRate = 0.0005; // Rate of growth
+    var initialRadius = 0.08; 
+    var growthRate = 0.0005; 
+    var score = 0;
+    var sizeThreshold = 0.25;
+
+
+    var animationId;
 
     // Generate initial positions and colors for bacteria
     var bacteriaData = [];
@@ -57,7 +62,68 @@ function main() {
         };
         bacteriaData.push(bacteria);
     }
+    var mousePosition = {x: 0, y: 0};
 
+    // Adjust for canvas position and scale
+    function updateMousePosition(event) {
+        var rect = canvas.getBoundingClientRect();
+        mousePosition.x = ((event.clientX - rect.left) - canvas.width / 2) / (canvas.width / 2);
+        mousePosition.y = (canvas.height / 2 - (event.clientY - rect.top)) / (canvas.height / 2);
+    }
+
+    canvas.addEventListener('mousemove', updateMousePosition);
+
+    function checkBacteriaUnderMouse() {
+        var i = bacteriaData.length;
+        while (i--) {
+            var bacteria = bacteriaData[i];
+            var dx = mousePosition.x - bacteria.centerX;
+            var dy = mousePosition.y - bacteria.centerY;
+            var distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < initialRadius) {
+                return i; // Index of bacteria under mouse
+            }
+        }
+        return -1; // No bacteria under mouse
+    }
+
+    canvas.addEventListener('click', function() {
+        var index = checkBacteriaUnderMouse();
+        if (index >= 0) {
+            bacteriaData.splice(index, 1); // Remove the bacteria
+            numBacteria--; // Update bacteria count
+            score += 10;
+            updateScoreDisplay();
+        }
+    });
+
+    function updateScoreDisplay() {
+        var scoreElement = document.getElementById('scoreDisplay');
+        if(scoreElement) {
+            scoreElement.innerText = 'Score: ' + score;
+        }
+    }
+
+    function checkGameConditions() {
+        var thresholdReached = 0;
+        for (var i = 0; i < bacteriaData.length; i++) {
+            var bacteriaRadius = initialRadius;
+            if (bacteriaRadius >= sizeThreshold) {
+                thresholdReached++;
+                if (thresholdReached >= 2) {
+                    displayGameOver();
+                    return false; 
+                }
+            }
+        }
+        // Check win condition: if all bacteria are removed
+        if (bacteriaData.length === 0) {
+            displayWin();
+            return false; // Indicate game should not continue
+        }
+        return true; // Indicate game should continue
+    }
+    
     function animate() {
         var vertices = [];
         var colors = [];
@@ -128,7 +194,21 @@ function main() {
             gl.drawArrays(gl.TRIANGLE_FAN, start, count);
         }
 
-        requestAnimationFrame(animate);
+        // Check game conditions before continuing animation
+        if (checkGameConditions()) {
+            animationId = requestAnimationFrame(animate);
+        } else {
+            cancelAnimationFrame(animationId); // Stop the animation
+        }
+    }
+    function displayWin() {
+        alert("You Win! All bacteria were poisoned.");
+        cancelAnimationFrame(animationId); // Stop the animation if not already stopped
+    }
+    
+    function displayGameOver() {
+        alert("Game Over! Two bacteria reached the threshold.");
+        cancelAnimationFrame(animationId); // Ensure animation is stopped
     }
 
     animate();
