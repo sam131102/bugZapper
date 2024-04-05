@@ -6,9 +6,11 @@ var VSHADER_SOURCE =
     'uniform mat4 Vmatrix;' +
     'uniform mat4 Mmatrix;' +
     'varying vec3 vColor;' +
+    'uniform float u_PointSize;' +
     'void main(void) {' +
     '   gl_Position = Pmatrix * Vmatrix * Mmatrix * vec4(position, 1.0);' +
     '   vColor = color;' +
+    '   gl_PointSize = u_PointSize;' +
     '}';
 
 // Fragment shader program
@@ -113,7 +115,23 @@ function createSphere(radius, latitudeBands, longitudeBands) {
     return { vertices: vertices, colors: colors, indices: indices };
 }
 
+function generateBacteriaData(numBacteria, sphereRadius) {
+    var positions = [];
+    var colors = [];
+    var scales = [];
+    for (var i = 0; i < numBacteria; i++) {
+        var theta = Math.random() * 2 * Math.PI;
+        var phi = Math.acos(2 * Math.random() - 1);
+        var x = sphereRadius * Math.sin(phi) * Math.cos(theta);
+        var y = sphereRadius * Math.sin(phi) * Math.sin(theta);
+        var z = sphereRadius * Math.cos(phi);
 
+        positions.push(x, y, z);
+        scales.push(1.0);
+        colors.push(Math.random(), Math.random(), Math.random());
+    }
+    return { positions: positions, colors: colors, scales: scales};
+}
 
 var canvas = document.getElementById('black');
 var gl = canvas.getContext('webgl');
@@ -141,12 +159,24 @@ var indexBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphere.indices), gl.STATIC_DRAW);
 
+var numBacteria = Math.floor(Math.random() * 10) + 1;
+var bacteria = generateBacteriaData(numBacteria, 2);
+
+var bacteriaPositionBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, bacteriaPositionBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bacteria.positions), gl.STATIC_DRAW);
+
+var bacteriaColorBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, bacteriaColorBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bacteria.colors), gl.STATIC_DRAW);
+
 var positionAttrib = gl.getAttribLocation(program, 'position');
 var colorAttrib = gl.getAttribLocation(program, 'color');
 
 var Pmatrix = gl.getUniformLocation(program, 'Pmatrix');
 var Vmatrix = gl.getUniformLocation(program, 'Vmatrix');
 var Mmatrix = gl.getUniformLocation(program, 'Mmatrix');
+var uPointSize = gl.getUniformLocation(program, 'u_PointSize');
 
 var proj_matrix = mat4.create();
 mat4.perspective(proj_matrix, Math.PI / 4, canvas.width / canvas.height, 1, 100);
@@ -193,8 +223,8 @@ function updateModelMatrix() {
     gl.uniformMatrix4fv(Mmatrix, false, mo_matrix); 
 }
 function render() {
-
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.vertexAttribPointer(positionAttrib, 3, gl.FLOAT, false, 0, 0);
@@ -204,14 +234,31 @@ function render() {
     gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(colorAttrib);
 
-    gl.enable(gl.DEPTH_TEST);
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.drawElements(gl.TRIANGLES, sphere.indices.length, gl.UNSIGNED_SHORT, 0);
 
+    gl.bindBuffer(gl.ARRAY_BUFFER, bacteriaPositionBuffer);
+    gl.vertexAttribPointer(positionAttrib, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(positionAttrib);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, bacteriaColorBuffer);
+    gl.vertexAttribPointer(colorAttrib, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(colorAttrib);
+
+    for (var i = 0; i < bacteria.positions.length / 3; i++) { 
+        gl.uniform1f(uPointSize, bacteria.scales[i] * 10.0);
+        gl.drawArrays(gl.POINTS, i, 1);
+    }
+
+    animateGrowth(); 
     requestAnimationFrame(render);
 }
+var growthRate = 0.05;
+function animateGrowth() {
+    for (var i = 0; i < bacteria.scales.length; i++) {
+        bacteria.scales[i] += growthRate;
+    }
+}
+
 
 render();
